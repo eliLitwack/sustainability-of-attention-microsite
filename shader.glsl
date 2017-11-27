@@ -1,3 +1,13 @@
+varying vec2 v_Coordinates;
+ 
+uniform vec2 u_Scale;
+uniform sampler2D u_Texture0;
+ 
+uniform sampler2D image;
+vec4 FragmentColor;
+float offset[3];
+float weight[3];
+
 void main(void) {
     //create arrays with buildings and radii
     const int numBuild = 7;
@@ -46,58 +56,20 @@ void main(void) {
     tex = (tex*(1.0-fac))+(bwTex*fac);
 
     //create a gaussian blur over the entire map
-    #define gauss_width 7
-    int sumr=0, sumg=0, sumb=0;
-    int gauss_fact[gauss_width];
-    gauss_fact[0]=1;
-    gauss_fact[1]=6;
-    gauss_fact[2]=15;
-    gauss_fact[3]=20;
-    gauss_fact[4]=15;
-    gauss_fact[5]=6;
-    gauss_fact[6]=1;
-    int gauss_sum=64;
-    int w = int(vTextureCoords.x);
-    int h = int(vTextureCoords.y);
- 
-    for(int i=1;i<w-1;i++){
-      for(int j=1;j<h-1;j++){
-        sumr=0;
-        sumg=0;
-        sumb=0;
-        for(int k=0;k<gauss_width;k++){    
-          color=getpixel(temp,i-((gauss_width-1)>>1)+k,j);
-          r=getr32(color);
-          g=getg32(color);
-          b=getb32(color);
-          sumr+=r*gauss_fact[k];
-          sumg+=g*gauss_fact[k];
-          sumb+=b*gauss_fact[k];
-        }
-        putpixel(temp1,i,j,makecol(sumr/gauss_sum,sumg/gauss_sum, sumb/gauss_sum));
-      } 
+    //source: http://rastergrid.com/blog/2010/09/efficient-gaussian-blur-with-linear-sampling/
+    offset[0] = 0.0;
+    offset[1] = 1.3846153846;
+    offset[2] = 3.2307692308;
+    weight[0] = 0.2270270270;
+    weight[1] = 0.3162162162;
+    weight[2] = 0.0702702703;
+
+    FragmentColor = texture2D( image, vec2(gl_FragCoord)/1024.0 ) * weight[0];
+    for (int i=1; i<3; i++) {
+        FragmentColor += texture2D( image, ( vec2(gl_FragCoord)+vec2(0.0, offset[i]) )/1024.0 ) * weight[i];
+        FragmentColor += texture2D( image, ( vec2(gl_FragCoord)-vec2(0.0, offset[i]) )/1024.0 ) * weight[i];
     }
- 
-    for(int i=1;i<w-1;i++){
-      for(int j=1;j<h-1;j++){
-        sumr=0;
-        sumg=0;
-        sumb=0;
-        for(int k=0;k<gauss_width;k++){
-          color=getpixel(temp1,i,j-((gauss_width-1)>>1)+k);
-          r=getr32(color);
-          g=getg32(color);
-          b=getb32(color);
-          sumr+=r*gauss_fact[k];
-          sumg+=g*gauss_fact[k];
-          sumb+=b*gauss_fact[k];
-        }
-        sumr/=gauss_sum;
-        sumg/=gauss_sum;
-        sumb/=gauss_sum;
-        putpixel(temp2,i,j,makecol(sumr,sumg,sumb));
-      } 
-    }
+
     //end insertion of gaussian blur
     
     gl_FragColor = tex;

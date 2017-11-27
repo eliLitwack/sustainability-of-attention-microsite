@@ -44,6 +44,61 @@ void main(void) {
     //mix bw and colored vectors based on a factor
     float fac = clamp(pow(distance, .8)*1500.0*(1./rad), 0.0, 1.0);
     tex = (tex*(1.0-fac))+(bwTex*fac);
+
+    //create a gaussian blur over the entire map
+    #define gauss_width 7
+    int sumr=0, sumg=0, sumb=0;
+    int gauss_fact[gauss_width];
+    gauss_fact[0]=1;
+    gauss_fact[1]=6;
+    gauss_fact[2]=15;
+    gauss_fact[3]=20;
+    gauss_fact[4]=15;
+    gauss_fact[5]=6;
+    gauss_fact[6]=1;
+    int gauss_sum=64;
+    int w = int(vTextureCoords.x);
+    int h = int(vTextureCoords.y);
+ 
+    for(int i=1;i<w-1;i++){
+      for(int j=1;j<h-1;j++){
+        sumr=0;
+        sumg=0;
+        sumb=0;
+        for(int k=0;k<gauss_width;k++){    
+          color=getpixel(temp,i-((gauss_width-1)>>1)+k,j);
+          r=getr32(color);
+          g=getg32(color);
+          b=getb32(color);
+          sumr+=r*gauss_fact[k];
+          sumg+=g*gauss_fact[k];
+          sumb+=b*gauss_fact[k];
+        }
+        putpixel(temp1,i,j,makecol(sumr/gauss_sum,sumg/gauss_sum, sumb/gauss_sum));
+      } 
+    }
+ 
+    for(int i=1;i<w-1;i++){
+      for(int j=1;j<h-1;j++){
+        sumr=0;
+        sumg=0;
+        sumb=0;
+        for(int k=0;k<gauss_width;k++){
+          color=getpixel(temp1,i,j-((gauss_width-1)>>1)+k);
+          r=getr32(color);
+          g=getg32(color);
+          b=getb32(color);
+          sumr+=r*gauss_fact[k];
+          sumg+=g*gauss_fact[k];
+          sumb+=b*gauss_fact[k];
+        }
+        sumr/=gauss_sum;
+        sumg/=gauss_sum;
+        sumb/=gauss_sum;
+        putpixel(temp2,i,j,makecol(sumr,sumg,sumb));
+      } 
+    }
+    //end insertion of gaussian blur
     
     gl_FragColor = tex;
 }
